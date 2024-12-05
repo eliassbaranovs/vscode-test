@@ -21,6 +21,9 @@ RUN apt-get update && apt-get install -y \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
+# Set the environment variable for Python
+ENV PYTHON=/usr/bin/python3
+
 # Run npm ci with cache
 RUN --mount=type=cache,id=s/4a11c9d5-94c6-453a-8cc4-dfb18a469183-/root/npm,target=/root/.npm npm ci
 
