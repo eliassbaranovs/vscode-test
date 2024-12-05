@@ -1,21 +1,40 @@
-FROM gitpod/workspace-full:latest
+# Use the base image
+FROM mcr.microsoft.com/devcontainers/typescript-node:20-bookworm
 
-USER gitpod
+# Add install script
+ADD install-vscode.sh /root/
+RUN /root/install-vscode.sh
 
-# We use latest major version of Node.js distributed VS Code. (see about dialog in your local VS Code)
-RUN bash -c ". .nvm/nvm.sh \
-    && nvm install 20 \
-    && nvm use 20 \
-    && nvm alias default 20"
+# Configure git
+RUN git config --system codespaces-theme.hide-status 1
 
-RUN echo "nvm use default &>/dev/null" >> ~/.bashrc.d/51-nvm-fix
+# Switch to node user
+USER node
 
-# Install dependencies
-RUN sudo apt-get update \
-    && sudo apt-get install -y --no-install-recommends \
-        xvfb x11vnc fluxbox dbus-x11 x11-utils x11-xserver-utils xdg-utils \
-        fbautostart xterm eterm gnome-terminal gnome-keyring seahorse nautilus \
-        libx11-dev libxkbfile-dev libsecret-1-dev libnotify4 libnss3 libxss1 \
-        libasound2 libgbm1 xfonts-base xfonts-terminus fonts-noto fonts-wqy-microhei \
-        fonts-droid-fallback vim-tiny nano libgconf2-dev libgtk-3-dev twm \
-    && sudo apt-get clean && sudo rm -rf /var/cache/apt/* && sudo rm -rf /var/lib/apt/lists/* && sudo rm -rf /tmp/*
+# Install node-gyp globally
+RUN npm install -g node-gyp
+
+# Set up npm cache
+RUN NPM_CACHE="$(npm config get cache)" && rm -rf "$NPM_CACHE" && ln -s /vscode-dev/npm-cache "$NPM_CACHE"
+
+# Set DISPLAY environment variable
+RUN echo 'export DISPLAY="${DISPLAY:-:1}"' | tee -a ~/.bashrc >> ~/.zshrc
+
+# Switch back to root user
+USER root
+
+# Install Python and build dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set permissions and create npm cache directory
+CMD chown node:node /vscode-dev && sudo -u node mkdir -p /vscode-dev/npm-cache && sleep inf
+
+# Copy the application code
+COPY . /app/.
+
+# Run npm ci with cache
+RUN --mount=type=cache,id=s/4a11c9d5-94c6-453a-8cc4-dfb18a469183-/root/npm,target=/root/.npm npm ci
