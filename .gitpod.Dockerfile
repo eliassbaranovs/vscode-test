@@ -26,6 +26,7 @@ USER root
 # Install Python and build dependencies
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-distutils \
     make \
     g++ \
     && rm -rf /var/lib/apt/lists/*
